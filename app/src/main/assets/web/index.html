@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MTU Tepi Campus - Cafeteria Central Web Dashboard</title>
+  <style>
+    :root {
+      --primary: #004D40;
+      --primary-light: #00796B;
+      --accent: #FFB300;
+      --bg: #F4F7F6;
+      --card-bg: #FFFFFF;
+      --text-main: #1C2826;
+      --text-muted: #5A6E68;
+      --border: #D8E2DF;
+      --success: #2E7D32;
+      --danger: #C62828;
+      --warning: #EF6C00;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* Top University Web Header */
+    header {
+      background: linear-gradient(135deg, #00332C 0%, #004D40 60%, #00796B 100%);
+      color: white;
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-logo {
+      width: 44px; height: 44px; background: #FFB300; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-weight: 900;
+      color: #004D40; font-size: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .brand-text h1 { font-size: 17px; font-weight: 800; letter-spacing: 0.5px; }
+    .brand-text p { font-size: 11px; opacity: 0.85; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .sys-badge {
+      background: rgba(255,255,255,0.15); padding: 6px 12px; border-radius: 20px;
+      font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px;
+    }
+    .sys-dot { width: 8px; height: 8px; border-radius: 50%; background: #00E676; }
+
+    /* Navigation Bar */
+    nav {
+      background: #FFFFFF; border-bottom: 1px solid var(--border);
+      display: flex; padding: 0 24px; gap: 8px; overflow-x: auto;
+    }
+    .nav-tab {
+      padding: 14px 18px; border: none; background: none; font-size: 13px; font-weight: 600;
+      color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent;
+      display: flex; align-items: center; gap: 8px; white-space: nowrap;
+    }
+    .nav-tab.active { color: var(--primary-light); border-bottom-color: var(--primary-light); }
+    .nav-tab:hover:not(.active) { color: var(--text-main); }
+
+    /* Main Container */
+    main { padding: 24px; max-width: 1300px; margin: 0 auto; width: 100%; flex: 1; }
+    .section-view { display: none; }
+    .section-view.active { display: block; }
+
+    /* Metric Cards Grid */
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .metric-card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px;
+      padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); display: flex; flex-direction: column;
+    }
+    .metric-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-value { font-size: 28px; font-weight: 800; color: var(--primary); margin: 6px 0; }
+    .metric-sub { font-size: 11px; color: var(--text-muted); }
+    .metric-highlight { color: var(--danger); font-weight: 700; }
+
+    /* Layout Cards & Tables */
+    .card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px;
+      padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 20px;
+    }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .card-title { font-size: 16px; font-weight: 800; color: var(--text-main); }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    th { padding: 12px 14px; background: #F8FAF9; color: var(--text-muted); font-weight: 700; border-bottom: 1px solid var(--border); }
+    td { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    tr:hover td { background: #F9FBFA; }
+
+    .badge {
+      display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 10px;
+      font-weight: 700; text-transform: uppercase;
+    }
+    .badge-active { background: #E8F5E9; color: #2E7D32; }
+    .badge-suspended { background: #FFEBEE; color: #C62828; }
+    .badge-fasting { background: #F3E5F5; color: #7B1FA2; }
+    .badge-regular { background: #E0F2F1; color: #00796B; }
+    .badge-muslim { background: #E8F5E9; color: #2E7D32; }
+
+    /* Action Buttons */
+    .btn {
+      padding: 8px 16px; border-radius: 10px; font-size: 12px; font-weight: 700;
+      border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary { background: var(--primary-light); color: white; }
+    .btn-primary:hover { background: var(--primary); }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+    .btn-outline:hover { background: #F0F4F3; }
+    .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+    /* Interactive Scanner Terminal */
+    .scanner-terminal {
+      background: #111A18; border-radius: 16px; padding: 24px; color: white; text-align: center;
+      margin-bottom: 24px; border: 2px solid #00BFA5;
+    }
+    .reticle {
+      width: 180px; height: 180px; margin: 0 auto 16px auto; border: 2px dashed #00E676;
+      border-radius: 16px; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; background: rgba(0, 230, 118, 0.05); position: relative;
+    }
+    .reticle-laser {
+      position: absolute; width: 100%; height: 2px; background: #00E676;
+      box-shadow: 0 0 10px #00E676; top: 50%; animation: scanMove 2s infinite ease-in-out alternate;
+    }
+    @keyframes scanMove { 0% { top: 10%; } 100% { top: 90%; } }
+
+    /* API Console */
+    .api-block {
+      background: #1E2927; color: #A7F3D0; font-family: monospace; padding: 16px;
+      border-radius: 12px; font-size: 12px; overflow-x: auto; margin-top: 10px;
+    }
+
+    footer {
+      text-align: center; padding: 18px; font-size: 11px; color: var(--text-muted);
+      border-top: 1px solid var(--border); background: white;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- University Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">MTU</div>
+      <div class="brand-text">
+        <h1>MIZAN-TEPI UNIVERSITY • TEPI CAMPUS</h1>
+        <p>Central Cafeteria Verification & Headcount System (Web Administrative Portal)</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="sys-badge">
+        <span class="sys-dot"></span>
+        <span>PostgreSQL Node Live</span>
+      </div>
+      <button class="btn btn-outline" style="color: white; border-color: rgba(255,255,255,0.3);" onclick="refreshData()">↻ Refresh</button>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav>
+    <button class="nav-tab active" onclick="switchTab('tab-dashboard')">📊 Live Dashboard</button>
+    <button class="nav-tab" onclick="switchTab('tab-students')">👨‍🎓 Student Eligibility</button>
+    <button class="nav-tab" onclick="switchTab('tab-terminal')">🛡️ Web Gatekeeper Terminal</button>
+    <button class="nav-tab" onclick="switchTab('tab-api')">⚡ REST API & Schema</button>
+    <button class="nav-tab" onclick="switchTab('tab-report')">📄 Official Daily Report</button>
+  </nav>
+
+  <!-- Main Content Areas -->
+  <main>
+
+    <!-- SECTION 1: LIVE DASHBOARD -->
+    <section id="tab-dashboard" class="section-view active">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <span class="metric-title">Today's Headcount</span>
+          <span class="metric-value" id="val-total-served">2,842</span>
+          <span class="metric-sub">Across Main & Tech Dining Halls</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-title">Anti-Passback Blocked</span>
+          <span class="metric-value metric-highlight" id="val-passback">18</span>
+          <span class="metric-sub">Duplicate entrance attempts prevented</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-title">Active Window</span>
+          <span class="metric-value" style="font-size: 22px; color: #00796B;">LUNCH</span>
+          <span class="metric-sub">11:45 AM - 02:30 PM (68% capacity)</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-title">Kitchen Rations Served</span>
+          <span class="metric-value" id="val-kitchen-portions">2,842 / 3,100</span>
+          <span class="metric-sub">Injera & Wot portions allocated</span>
+        </div>
+      </div>
+
+      <!-- Meal Shift Breakdown -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Real-Time Meal Consumption Distribution</h2>
+          <span class="badge badge-active">Live Automated Tracking</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+          <div style="background: #F8FAF9; padding: 16px; border-radius: 12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+              <strong>Breakfast (06:30 - 09:00)</strong>
+              <span id="txt-b-count">924 students</span>
+            </div>
+            <div style="height: 10px; background: #E0E0E0; border-radius: 5px; overflow: hidden;">
+              <div style="width: 78%; height: 100%; background: #00897B;"></div>
+            </div>
+          </div>
+          <div style="background: #F8FAF9; padding: 16px; border-radius: 12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+              <strong>Lunch (11:45 - 14:30)</strong>
+              <span id="txt-l-count">1,448 students</span>
+            </div>
+            <div style="height: 10px; background: #E0E0E0; border-radius: 5px; overflow: hidden;">
+              <div style="width: 92%; height: 100%; background: #00796B;"></div>
+            </div>
+          </div>
+          <div style="background: #F8FAF9; padding: 16px; border-radius: 12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+              <strong>Dinner (18:00 - 21:00)</strong>
+              <span id="txt-d-count">470 students</span>
+            </div>
+            <div style="height: 10px; background: #E0E0E0; border-radius: 5px; overflow: hidden;">
+              <div style="width: 45%; height: 100%; background: #004D40;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Entrance Logs -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Live Gatekeeper Entrance Audit Stream</h2>
+          <button class="btn btn-outline btn-sm" onclick="clearLogs()">Clear Stream</button>
+        </div>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Student ID</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Meal Window</th>
+                <th>Dining Hall</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body">
+              <tr>
+                <td>12:34:10</td>
+                <td><strong>MTU/14022/13</strong></td>
+                <td>Dejene Gashaw</td>
+                <td>Information Systems</td>
+                <td>Lunch</td>
+                <td>Main Hall 1</td>
+                <td><span class="badge badge-active">ACCESS GRANTED</span></td>
+              </tr>
+              <tr>
+                <td>12:33:45</td>
+                <td><strong>MTU/13890/13</strong></td>
+                <td>Meron Tadesse</td>
+                <td>Software Engineering</td>
+                <td>Lunch</td>
+                <td>Main Hall 1</td>
+                <td><span class="badge badge-active">ACCESS GRANTED</span></td>
+              </tr>
+              <tr style="background: #FFF5F5;">
+                <td>12:31:02</td>
+                <td><strong>MTU/14022/13</strong></td>
+                <td>Dejene Gashaw</td>
+                <td>Information Systems</td>
+                <td>Lunch</td>
+                <td>Main Hall 1</td>
+                <td><span class="badge badge-suspended">ANTI-PASSBACK BLOCKED</span></td>
+              </tr>
+              <tr>
+                <td>12:28:18</td>
+                <td><strong>MTU/14210/14</strong></td>
+                <td>Mohammed Ahmed</td>
+                <td>Computer Science</td>
+                <td>Lunch</td>
+                <td>Main Hall 1</td>
+                <td><span class="badge badge-active">ACCESS GRANTED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: STUDENT ELIGIBILITY DIRECTORY -->
+    <section id="tab-students" class="section-view">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Registered Students & Dining Eligibility</h2>
+            <p style="font-size: 12px; color: var(--text-muted);">Manage status, hall assignments, and dietary preferences</p>
+          </div>
+          <button class="btn btn-primary" onclick="alert('Student Registration modal ready for MTU IS Department database!')">+ Add Student</button>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <input type="text" id="studentSearch" placeholder="Search by MTU ID or Name..."
+                 onkeyup="filterStudents()"
+                 style="width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px;">
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table id="students-table">
+            <thead>
+              <tr>
+                <th>MTU ID</th>
+                <th>Full Name</th>
+                <th>Department</th>
+                <th>Year</th>
+                <th>Dietary Profile</th>
+                <th>Assigned Hall</th>
+                <th>Eligibility</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>MTU/14022/13</strong></td>
+                <td>Dejene Gashaw</td>
+                <td>Information Systems</td>
+                <td>4th Year</td>
+                <td><span class="badge badge-regular">Regular (Non-Fasting)</span></td>
+                <td>Main Hall 1</td>
+                <td><span class="badge badge-active">Active</span></td>
+                <td><button class="btn btn-outline btn-sm" onclick="toggleStatus(this)">Suspend</button></td>
+              </tr>
+              <tr>
+                <td><strong>MTU/13890/13</strong></td>
+                <td>Meron Tadesse</td>
+                <td>Software Engineering</td>
+                <td>4th Year</td>
+                <td><span class="badge badge-fasting">Orthodox Fasting</span></td>
+                <td>Main Hall 1</td>
+                <td><span class="badge badge-active">Active</span></td>
+                <td><button class="btn btn-outline btn-sm" onclick="toggleStatus(this)">Suspend</button></td>
+              </tr>
+              <tr>
+                <td><strong>MTU/14210/14</strong></td>
+                <td>Mohammed Ahmed</td>
+                <td>Computer Science</td>
+                <td>3rd Year</td>
+                <td><span class="badge badge-muslim">Muslim Halal</span></td>
+                <td>Main Hall 1</td>
+                <td><span class="badge badge-active">Active</span></td>
+                <td><button class="btn btn-outline btn-sm" onclick="toggleStatus(this)">Suspend</button></td>
+              </tr>
+              <tr>
+                <td><strong>MTU/15104/15</strong></td>
+                <td>Bethelhem Bekele</td>
+                <td>Information Systems</td>
+                <td>2nd Year</td>
+                <td><span class="badge badge-regular">Regular (Non-Fasting)</span></td>
+                <td>Tech Hall 2</td>
+                <td><span class="badge badge-active">Active</span></td>
+                <td><button class="btn btn-outline btn-sm" onclick="toggleStatus(this)">Suspend</button></td>
+              </tr>
+              <tr>
+                <td><strong>MTU/12099/12</strong></td>
+                <td>Dawit Alemayehu</td>
+                <td>Electrical Engineering</td>
+                <td>5th Year</td>
+                <td><span class="badge badge-regular">Regular (Non-Fasting)</span></td>
+                <td>Main Hall 1</td>
+                <td><span class="badge badge-suspended">Suspended</span></td>
+                <td><button class="btn btn-outline btn-sm" onclick="toggleStatus(this)">Activate</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: WEB GATEKEEPER TERMINAL -->
+    <section id="tab-terminal" class="section-view">
+      <div class="card">
+        <h2 class="card-title">Gatekeeper Turnstile Terminal (Web Client Simulation)</h2>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">
+          Simulates the hardware/web turnstile barcode and QR scanner running at MTU dining hall doors.
+        </p>
+
+        <div class="scanner-terminal">
+          <div class="reticle">
+            <div class="reticle-laser"></div>
+            <span style="font-size: 11px; color: #00E676; font-weight: 700; z-index: 2;">READY TO SCAN</span>
+          </div>
+
+          <div style="max-width: 400px; margin: 0 auto; display: flex; gap: 8px;">
+            <input type="text" id="terminalScanInput" placeholder="Enter or scan MTU ID..."
+                   style="flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #00BFA5; background: #1B2926; color: white;">
+            <button class="btn btn-primary" onclick="simulateWebScan()">VERIFY</button>
+          </div>
+
+          <div style="margin-top: 16px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-sm btn-outline" style="color: white; border-color: #00BFA5;" onclick="triggerTestScan('MTU/14022/13')">Scan Dejene (Granted)</button>
+            <button class="btn btn-sm btn-outline" style="color: #FF8A80; border-color: #FF5252;" onclick="triggerTestScan('MTU/14022/13')">Rescan Dejene (Anti-Passback)</button>
+            <button class="btn btn-sm btn-outline" style="color: #FFD54F; border-color: #FFD54F;" onclick="triggerTestScan('MTU/12099/12')">Scan Suspended</button>
+          </div>
+
+          <div id="scanResultNotification" style="margin-top: 20px; display: none; padding: 14px; border-radius: 12px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: REST API & DATABASE SCHEMA -->
+    <section id="tab-api" class="section-view">
+      <div class="card">
+        <h2 class="card-title">Backend Architecture: FastAPI & PostgreSQL Schema</h2>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+          Developed following Object-Oriented System Analysis & Design (OOSAD) for MTU Information Systems.
+        </p>
+
+        <h3 style="font-size: 14px; margin-top: 16px;">1. Verification Endpoint: <code>POST /api/v1/verify-pass</code></h3>
+        <div class="api-block">
+curl -X POST "https://cafeteria.tepi.mtu.edu.et/api/v1/verify-pass" \
+  -H "Content-Type: application/json" \
+  -H "X-Gatekeeper-Station: DH01_GATE1" \
+  -d '{
+    "student_id": "MTU/14022/13",
+    "token_payload": "MTU_MEAL::MTU/14022/13::LUNCH::17923::8FA1",
+    "session": "LUNCH",
+    "dining_hall": "HALL_1_MAIN"
+  }'
+        </div>
+
+        <h3 style="font-size: 14px; margin-top: 16px;">Response (Anti-Passback Violation Example):</h3>
+        <div class="api-block">
+{
+  "status": "REJECTED_PASSBACK",
+  "approved": false,
+  "message": "Student already accessed Lunch at 12:34:10 PM today",
+  "student": {
+    "mtu_id": "MTU/14022/13",
+    "name": "Dejene Gashaw",
+    "department": "Information Systems",
+    "dietary": "REGULAR_NON_FASTING"
+  },
+  "anomaly_logged": true
+}
+        </div>
+
+        <h3 style="font-size: 14px; margin-top: 16px;">2. PostgreSQL Table DDL (Relational Database):</h3>
+        <div class="api-block">
+CREATE TABLE students (
+    id SERIAL PRIMARY KEY,
+    mtu_id VARCHAR(30) UNIQUE NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    department VARCHAR(80) NOT NULL,
+    year_of_study INT NOT NULL,
+    dietary_type VARCHAR(30) NOT NULL,
+    dining_hall VARCHAR(30) NOT NULL,
+    status VARCHAR(20) DEFAULT 'ACTIVE'
+);
+
+CREATE TABLE meal_scan_logs (
+    id SERIAL PRIMARY KEY,
+    scan_id VARCHAR(36) UNIQUE NOT NULL,
+    student_id VARCHAR(30) REFERENCES students(mtu_id),
+    meal_session VARCHAR(20) NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    dining_hall VARCHAR(30) NOT NULL,
+    status VARCHAR(30) NOT NULL,
+    is_offline_cached BOOLEAN DEFAULT FALSE
+);
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: OFFICIAL DAILY REPORT -->
+    <section id="tab-report" class="section-view">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Daily Cafeteria Verification & Headcount Report</h2>
+          <button class="btn btn-primary" onclick="window.print()">Print / Export PDF</button>
+        </div>
+        <div style="background: white; border: 1px dashed var(--border); padding: 24px; border-radius: 12px; font-family: monospace; font-size: 12px; line-height: 1.6;">
+==================================================<br>
+MIZAN-TEPI UNIVERSITY - TEPI CAMPUS<br>
+STUDENT CAFETERIA DAILY CONSUMPTION REPORT<br>
+Date: Today (Generated: Live Server Time)<br>
+System: Automated Digital Meal Card Verification<br>
+==================================================<br><br>
+1. MEAL SUMMARY<br>
+--------------------------------------------------<br>
+- Total Headcount Served: 2,842 students<br>
+  * Breakfast: 924 students<br>
+  * Lunch:     1,448 students<br>
+  * Dinner:    470 students<br><br>
+2. FRAUD PREVENTION (ANTI-PASSBACK)<br>
+--------------------------------------------------<br>
+- Duplicate Scans Prevented: 18 attempts<br>
+- Suspended Cards Blocked:   4 attempts<br>
+- Total Food Waste Avoided:  ~22 meal portions saved<br><br>
+3. NETWORK RESILIENCE<br>
+--------------------------------------------------<br>
+- Local Offline Cached Scans: 14<br>
+- Server Synchronization: 100% complete.<br>
+==================================================
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    Mizan-Tepi University • Tepi Campus Dining Services • Department of Information Systems
+  </footer>
+
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.section-view').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      event.currentTarget.classList.add('active');
+    }
+
+    let scanCount = 0;
+    function triggerTestScan(id) {
+      document.getElementById('terminalScanInput').value = id;
+      simulateWebScan();
+    }
+
+    function simulateWebScan() {
+      const id = document.getElementById('terminalScanInput').value.trim();
+      const notif = document.getElementById('scanResultNotification');
+      notif.style.display = 'block';
+
+      scanCount++;
+      if (id === 'MTU/12099/12') {
+        notif.style.background = '#FFEBEE';
+        notif.style.color = '#C62828';
+        notif.innerHTML = '<strong>❌ ACCESS DENIED:</strong> Card Suspended. Please contact Cafeteria Administration.';
+      } else if (scanCount % 2 === 0) {
+        notif.style.background = '#FFEBEE';
+        notif.style.color = '#C62828';
+        notif.innerHTML = '<strong>⚠️ ANTI-PASSBACK DETECTED:</strong> Student ' + id + ' has already been admitted for this meal window!';
+      } else {
+        notif.style.background = '#E8F5E9';
+        notif.style.color = '#2E7D32';
+        notif.innerHTML = '<strong>✅ ACCESS GRANTED:</strong> Verified: ' + (id || 'Student') + ' (Information Systems). Proceed to food line.';
+      }
+    }
+
+    function filterStudents() {
+      const query = document.getElementById('studentSearch').value.toLowerCase();
+      const rows = document.querySelectorAll('#students-table tbody tr');
+      rows.forEach(r => {
+        const text = r.innerText.toLowerCase();
+        r.style.display = text.includes(query) ? '' : 'none';
+      });
+    }
+
+    function toggleStatus(btn) {
+      const row = btn.closest('tr');
+      const badge = row.querySelector('td:nth-child(7) .badge');
+      if (badge.classList.contains('badge-active')) {
+        badge.classList.remove('badge-active');
+        badge.classList.add('badge-suspended');
+        badge.innerText = 'Suspended';
+        btn.innerText = 'Activate';
+      } else {
+        badge.classList.remove('badge-suspended');
+        badge.classList.add('badge-active');
+        badge.innerText = 'Active';
+        btn.innerText = 'Suspend';
+      }
+    }
+
+    function refreshData() {
+      alert('Central PostgreSQL & FastAPI sync completed. Headcount updated!');
+    }
+
+    function clearLogs() {
+      document.getElementById('audit-table-body').innerHTML = '<tr><td colspan="7" style="text-align:center; color:gray;">Stream cleared. Ready for new scans.</td></tr>';
+    }
+  </script>
+</body>
+</html>
