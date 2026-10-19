@@ -54,4 +54,25 @@ class ExampleRobolectricTest {
         assertTrue(actors.contains(com.example.ui.model.UserActor.CASHIER))
         assertTrue(actors.contains(com.example.ui.model.UserActor.ADMIN))
     }
+
+    @Test
+    fun `authenticated user session model stores actor role and station correctly`() {
+        val studentSession = com.example.ui.model.AuthenticatedUser(
+            username = "MTU/14022/13",
+            displayName = "Dejene Gashaw",
+            actor = com.example.ui.model.UserActor.STUDENT,
+            studentMtuId = "MTU/14022/13",
+            stationOrDept = "Information Systems"
+        )
+        assertEquals(com.example.ui.model.UserActor.STUDENT, studentSession.actor)
+        assertEquals("MTU/14022/13", studentSession.studentMtuId)
+
+        val cashierSession = com.example.ui.model.AuthenticatedUser(
+            username = "cashier.haile",
+            displayName = "Officer Haile M.",
+            actor = com.example.ui.model.UserActor.CASHIER,
+            stationOrDept = "Turnstile Gate 1"
+        )
+        assertEquals(com.example.ui.model.UserActor.CASHIER, cashierSession.actor)
+    }
 }

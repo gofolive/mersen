@@ -1,6 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,22 +17,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,7 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.MealSession
-import com.example.data.model.Student
+import com.example.ui.model.AuthenticatedUser
 import com.example.ui.model.UserActor
 
 // Legacy compatibility
@@ -56,39 +46,30 @@ enum class AppRole(val title: String, val icon: String) {
 
 @Composable
 fun MtuHeader(
-    currentActor: UserActor,
-    onSelectActor: (UserActor) -> Unit,
-    currentStudent: Student?,
+    currentUser: AuthenticatedUser?,
     activeSession: MealSession,
     isOfflineMode: Boolean,
     onToggleOfflineMode: () -> Unit,
     unsyncedCount: Int,
-    onTriggerSync: () -> Unit
+    onTriggerSync: () -> Unit,
+    onLogout: () -> Unit
 ) {
-    var showActorDialog by remember { mutableStateOf(false) }
+    val actor = currentUser?.actor ?: UserActor.STUDENT
 
-    if (showActorDialog) {
-        ActorSelectionModal(
-            currentActor = currentActor,
-            onSelectActor = { onSelectActor(it) },
-            onDismiss = { showActorDialog = false }
-        )
-    }
-
-    val actorBgGradient = when (currentActor) {
+    val headerBg = when (actor) {
         UserActor.STUDENT -> Color(0xFF004D40)
-        UserActor.CASHIER -> Color(0xFF1B2E2B)
+        UserActor.CASHIER -> Color(0xFF142421)
         UserActor.ADMIN -> Color(0xFF281E1E)
     }
 
-    val actorAccentColor = when (currentActor) {
+    val actorAccentColor = when (actor) {
         UserActor.STUDENT -> Color(0xFFFFD54F)
         UserActor.CASHIER -> Color(0xFF00E676)
         UserActor.ADMIN -> Color(0xFFFF8A80)
     }
 
     Surface(
-        color = actorBgGradient,
+        color = headerBg,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -96,7 +77,7 @@ fun MtuHeader(
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
-            // Institutional Top Bar
+            // Top Row: MTU Crest and Logout Action
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -110,7 +91,7 @@ fun MtuHeader(
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color.White.copy(alpha = 0.15f))
                     ) {
-                        Text(text = currentActor.iconEmoji, fontSize = 20.sp)
+                        Text(text = actor.iconEmoji, fontSize = 20.sp)
                     }
 
                     Spacer(modifier = Modifier.width(10.dp))
@@ -124,7 +105,7 @@ fun MtuHeader(
                             letterSpacing = 0.5.sp
                         )
                         Text(
-                            text = "Tepi Campus • Cafeteria Access System",
+                            text = "Tepi Campus • Cafeteria Access Portal",
                             fontWeight = FontWeight.Medium,
                             fontSize = 10.sp,
                             color = Color.White.copy(alpha = 0.85f)
@@ -132,27 +113,27 @@ fun MtuHeader(
                     }
                 }
 
-                // Switch Actor Button
+                // Log Out Action Button
                 Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = Color.White.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color(0xFFD32F2F).copy(alpha = 0.85f),
                     modifier = Modifier
-                        .clickable { showActorDialog = true }
-                        .testTag("switch_actor_button")
+                        .clickable { onLogout() }
+                        .testTag("logout_button")
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.SwapHoriz,
-                            contentDescription = "Switch Actor",
+                            imageVector = Icons.Default.ExitToApp,
+                            contentDescription = "Log Out",
                             tint = Color.White,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Switch Role",
+                            text = "Log Out",
                             color = Color.White,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
@@ -163,49 +144,40 @@ fun MtuHeader(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Prominent Current Actor Badge Strip
+            // Prominent Current Actor Strip
             Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = Color.Black.copy(alpha = 0.25f),
+                shape = RoundedCornerShape(12.dp),
+                color = Color.Black.copy(alpha = 0.28f),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 12.dp, vertical = 7.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "LOGGED IN AS: ${currentActor.title.uppercase()}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = actorAccentColor,
-                                letterSpacing = 0.5.sp
-                            )
-                        }
-
                         Text(
-                            text = when (currentActor) {
-                                UserActor.STUDENT -> "${currentStudent?.fullName ?: "Student"} (${currentStudent?.mtuId ?: "MTU/14022/13"}) • Info Systems"
-                                UserActor.CASHIER -> "Officer Haile M. • Entrance Turnstile Gate 1 (Main Hall)"
-                                UserActor.ADMIN -> "Cafeteria Operations Manager • Full Access"
-                            },
+                            text = "LOGGED IN: ${actor.title.uppercase()}",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = actorAccentColor,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            text = "${currentUser?.displayName ?: "User"} • ${currentUser?.stationOrDept ?: ""}",
                             fontSize = 11.sp,
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontWeight = FontWeight.Medium
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
 
-                    // Network Offline status
+                    // Network status indicator
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         color = if (isOfflineMode) Color(0xFFD84315) else Color(0xFF00796B),
-                        modifier = Modifier
-                            .clickable { onToggleOfflineMode() }
-                            .testTag("network_mode_toggle")
+                        modifier = Modifier.clickable { onToggleOfflineMode() }
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -215,7 +187,7 @@ fun MtuHeader(
                                 imageVector = if (isOfflineMode) Icons.Default.CloudOff else Icons.Default.CloudDone,
                                 contentDescription = null,
                                 tint = Color.White,
-                                modifier = Modifier.size(12.dp)
+                                modifier = Modifier.size(11.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(

@@ -37,7 +37,10 @@ class MealCardViewModel(application: Application) : AndroidViewModel(application
     private val database = MtuMealDatabase.getInstance(application)
     private val repository = MealCardRepository(database.mealCardDao())
 
-    // Distinct Actor Separation
+    // Distinct Actor Separation & Authentication
+    private val _authenticatedUser = MutableStateFlow<com.example.ui.model.AuthenticatedUser?>(null)
+    val authenticatedUser: StateFlow<com.example.ui.model.AuthenticatedUser?> = _authenticatedUser.asStateFlow()
+
     private val _currentActor = MutableStateFlow(com.example.ui.model.UserActor.STUDENT)
     val currentActor: StateFlow<com.example.ui.model.UserActor> = _currentActor.asStateFlow()
 
@@ -184,6 +187,57 @@ class MealCardViewModel(application: Application) : AndroidViewModel(application
 
     fun setAdminTab(tab: com.example.ui.model.AdminTab) {
         _adminTab.value = tab
+    }
+
+    fun login(actor: com.example.ui.model.UserActor, username: String) {
+        viewModelScope.launch {
+            when (actor) {
+                com.example.ui.model.UserActor.STUDENT -> {
+                    val clean = username.trim()
+                    val matched = repository.getStudentByMtuId(clean)
+                        ?: repository.getStudentByMtuId("MTU/14022/13")
+                        ?: studentsList.value.firstOrNull()
+
+                    if (matched != null) {
+                        _selectedStudent.value = matched
+                        _currentActor.value = com.example.ui.model.UserActor.STUDENT
+                        _studentTab.value = com.example.ui.model.StudentTab.MY_CARD
+                        _authenticatedUser.value = com.example.ui.model.AuthenticatedUser(
+                            username = matched.mtuId,
+                            displayName = matched.fullName,
+                            actor = com.example.ui.model.UserActor.STUDENT,
+                            studentMtuId = matched.mtuId,
+                            stationOrDept = matched.department
+                        )
+                        generateCurrentToken()
+                    }
+                }
+                com.example.ui.model.UserActor.CASHIER -> {
+                    _currentActor.value = com.example.ui.model.UserActor.CASHIER
+                    _cashierTab.value = com.example.ui.model.CashierTab.SCANNER
+                    _authenticatedUser.value = com.example.ui.model.AuthenticatedUser(
+                        username = username.ifBlank { "cashier.haile" },
+                        displayName = "Officer Haile M.",
+                        actor = com.example.ui.model.UserActor.CASHIER,
+                        stationOrDept = "Turnstile Gate 1 (Main Hall)"
+                    )
+                }
+                com.example.ui.model.UserActor.ADMIN -> {
+                    _currentActor.value = com.example.ui.model.UserActor.ADMIN
+                    _adminTab.value = com.example.ui.model.AdminTab.HEADCOUNT
+                    _authenticatedUser.value = com.example.ui.model.AuthenticatedUser(
+                        username = username.ifBlank { "admin" },
+                        displayName = "Dining Administrator",
+                        actor = com.example.ui.model.UserActor.ADMIN,
+                        stationOrDept = "Central Cafeteria Operations"
+                    )
+                }
+            }
+        }
+    }
+
+    fun logout() {
+        _authenticatedUser.value = null
     }
 
     fun selectStudent(student: Student) {

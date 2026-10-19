@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.People
@@ -43,6 +42,7 @@ import com.example.ui.model.StudentTab
 import com.example.ui.model.UserActor
 import com.example.ui.screens.AdminDashboardScreen
 import com.example.ui.screens.CashierScannerScreen
+import com.example.ui.screens.LoginScreen
 import com.example.ui.screens.StudentMealCardScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.MealCardViewModel
@@ -61,8 +61,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainAppRoot(viewModel: MealCardViewModel = viewModel()) {
-    val currentActor by viewModel.currentActor.collectAsState()
-    val currentStudent by viewModel.selectedStudent.collectAsState()
+    val authenticatedUser by viewModel.authenticatedUser.collectAsState()
     val activeSession by viewModel.activeSession.collectAsState()
     val isOfflineMode by viewModel.isOfflineMode.collectAsState()
     val unsyncedCount by viewModel.unsyncedCount.collectAsState()
@@ -72,18 +71,30 @@ fun MainAppRoot(viewModel: MealCardViewModel = viewModel()) {
     val cashierTab by viewModel.cashierTab.collectAsState()
     val adminTab by viewModel.adminTab.collectAsState()
 
+    // 1. If not authenticated, display Login Screen
+    if (authenticatedUser == null) {
+        LoginScreen(
+            onLoginSuccess = { actor, username ->
+                viewModel.login(actor, username)
+            }
+        )
+        return
+    }
+
+    val user = authenticatedUser!!
+
+    // 2. Authenticated Actor Screen
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             MtuHeader(
-                currentActor = currentActor,
-                onSelectActor = { viewModel.setActor(it) },
-                currentStudent = currentStudent,
+                currentUser = user,
                 activeSession = activeSession,
                 isOfflineMode = isOfflineMode,
                 onToggleOfflineMode = { viewModel.toggleOfflineMode() },
                 unsyncedCount = unsyncedCount,
-                onTriggerSync = { viewModel.syncOfflineRecords() }
+                onTriggerSync = { viewModel.syncOfflineRecords() },
+                onLogout = { viewModel.logout() }
             )
         },
         bottomBar = {
@@ -91,8 +102,8 @@ fun MainAppRoot(viewModel: MealCardViewModel = viewModel()) {
                 containerColor = Color.White,
                 tonalElevation = 8.dp
             ) {
-                when (currentActor) {
-                    // 1. STUDENT ACTOR NAVIGATION
+                when (user.actor) {
+                    // STUDENT ONLY NAVIGATION
                     UserActor.STUDENT -> {
                         NavigationBarItem(
                             selected = studentTab == StudentTab.MY_CARD,
@@ -112,14 +123,14 @@ fun MainAppRoot(viewModel: MealCardViewModel = viewModel()) {
                                 selectedTextColor = Color(0xFF004D40),
                                 indicatorColor = Color(0xFFB2DFDB)
                             ),
-                            modifier = Modifier.testTag("student_nav_card")
+                            modifier = Modifier.testTag("nav_student_card")
                         )
 
                         NavigationBarItem(
                             selected = studentTab == StudentTab.MEAL_STATUS,
                             onClick = { viewModel.setStudentTab(StudentTab.MEAL_STATUS) },
                             icon = {
-                                Icon(imageVector = Icons.Default.Restaurant, contentDescription = "My Meal Dashboard")
+                                Icon(imageVector = Icons.Default.Restaurant, contentDescription = "Meal Dashboard")
                             },
                             label = {
                                 Text(
@@ -133,11 +144,11 @@ fun MainAppRoot(viewModel: MealCardViewModel = viewModel()) {
                                 selectedTextColor = Color(0xFF004D40),
                                 indicatorColor = Color(0xFFB2DFDB)
                             ),
-                            modifier = Modifier.testTag("student_nav_dashboard")
+                            modifier = Modifier.testTag("nav_student_status")
                         )
                     }
 
-                    // 2. CASHIER (SCANNER) ACTOR NAVIGATION
+                    // CASHIER ONLY NAVIGATION
                     UserActor.CASHIER -> {
                         NavigationBarItem(
                             selected = cashierTab == CashierTab.SCANNER,
@@ -167,7 +178,7 @@ fun MainAppRoot(viewModel: MealCardViewModel = viewModel()) {
                                 selectedTextColor = Color(0xFF004D40),
                                 indicatorColor = Color(0xFFB2DFDB)
                             ),
-                            modifier = Modifier.testTag("cashier_nav_scanner")
+                            modifier = Modifier.testTag("nav_cashier_scanner")
                         )
 
                         NavigationBarItem(
@@ -188,17 +199,17 @@ fun MainAppRoot(viewModel: MealCardViewModel = viewModel()) {
                                 selectedTextColor = Color(0xFF004D40),
                                 indicatorColor = Color(0xFFB2DFDB)
                             ),
-                            modifier = Modifier.testTag("cashier_nav_logs")
+                            modifier = Modifier.testTag("nav_cashier_logs")
                         )
                     }
 
-                    // 3. ADMINISTRATOR ACTOR NAVIGATION
+                    // ADMIN ONLY NAVIGATION
                     UserActor.ADMIN -> {
                         NavigationBarItem(
                             selected = adminTab == AdminTab.HEADCOUNT,
                             onClick = { viewModel.setAdminTab(AdminTab.HEADCOUNT) },
                             icon = {
-                                Icon(imageVector = Icons.Default.Assignment, contentDescription = "Campus Analytics")
+                                Icon(imageVector = Icons.Default.Assignment, contentDescription = "Campus Headcounts")
                             },
                             label = {
                                 Text(
@@ -212,7 +223,7 @@ fun MainAppRoot(viewModel: MealCardViewModel = viewModel()) {
                                 selectedTextColor = Color(0xFF004D40),
                                 indicatorColor = Color(0xFFB2DFDB)
                             ),
-                            modifier = Modifier.testTag("admin_nav_headcount")
+                            modifier = Modifier.testTag("nav_admin_headcount")
                         )
 
                         NavigationBarItem(
@@ -233,14 +244,14 @@ fun MainAppRoot(viewModel: MealCardViewModel = viewModel()) {
                                 selectedTextColor = Color(0xFF004D40),
                                 indicatorColor = Color(0xFFB2DFDB)
                             ),
-                            modifier = Modifier.testTag("admin_nav_roster")
+                            modifier = Modifier.testTag("nav_admin_roster")
                         )
 
                         NavigationBarItem(
                             selected = adminTab == AdminTab.WEB_PORTAL,
                             onClick = { viewModel.setAdminTab(AdminTab.WEB_PORTAL) },
                             icon = {
-                                Icon(imageVector = Icons.Default.Language, contentDescription = "Web Dashboard")
+                                Icon(imageVector = Icons.Default.Language, contentDescription = "Web Portal")
                             },
                             label = {
                                 Text(
@@ -254,7 +265,7 @@ fun MainAppRoot(viewModel: MealCardViewModel = viewModel()) {
                                 selectedTextColor = Color(0xFF004D40),
                                 indicatorColor = Color(0xFFB2DFDB)
                             ),
-                            modifier = Modifier.testTag("admin_nav_web")
+                            modifier = Modifier.testTag("nav_admin_web")
                         )
                     }
                 }
@@ -267,7 +278,7 @@ fun MainAppRoot(viewModel: MealCardViewModel = viewModel()) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            when (currentActor) {
+            when (user.actor) {
                 UserActor.STUDENT -> StudentMealCardScreen(viewModel = viewModel)
                 UserActor.CASHIER -> CashierScannerScreen(viewModel = viewModel)
                 UserActor.ADMIN -> AdminDashboardScreen(viewModel = viewModel)
