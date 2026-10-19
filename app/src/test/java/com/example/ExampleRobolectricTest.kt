@@ -45,4 +45,13 @@ class ExampleRobolectricTest {
         assertEquals("MTU/14022/13", parsed?.first)
         assertEquals(MealSession.LUNCH, parsed?.second)
     }
+
+    @Test
+    fun `verify three distinct actors defined with separate responsibilities`() {
+        val actors = com.example.ui.model.UserActor.values()
+        assertEquals(3, actors.size)
+        assertTrue(actors.contains(com.example.ui.model.UserActor.STUDENT))
+        assertTrue(actors.contains(com.example.ui.model.UserActor.CASHIER))
+        assertTrue(actors.contains(com.example.ui.model.UserActor.ADMIN))
+    }
 }

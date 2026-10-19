@@ -2,7 +2,6 @@ package com.example
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
@@ -12,8 +11,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -33,12 +36,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ui.components.AppRole
 import com.example.ui.components.MtuHeader
+import com.example.ui.model.AdminTab
+import com.example.ui.model.CashierTab
+import com.example.ui.model.StudentTab
+import com.example.ui.model.UserActor
 import com.example.ui.screens.AdminDashboardScreen
-import com.example.ui.screens.GatekeeperScannerScreen
+import com.example.ui.screens.CashierScannerScreen
 import com.example.ui.screens.StudentMealCardScreen
-import com.example.ui.screens.WebPortalScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.MealCardViewModel
 
@@ -56,22 +61,24 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainAppRoot(viewModel: MealCardViewModel = viewModel()) {
-    val currentRole by viewModel.currentRole.collectAsState()
+    val currentActor by viewModel.currentActor.collectAsState()
+    val currentStudent by viewModel.selectedStudent.collectAsState()
     val activeSession by viewModel.activeSession.collectAsState()
     val isOfflineMode by viewModel.isOfflineMode.collectAsState()
     val unsyncedCount by viewModel.unsyncedCount.collectAsState()
 
-    // BackHandler: returns to Student Card if on secondary screen
-    BackHandler(enabled = currentRole != AppRole.STUDENT) {
-        viewModel.selectRole(AppRole.STUDENT)
-    }
+    // Sub-tab states for each actor
+    val studentTab by viewModel.studentTab.collectAsState()
+    val cashierTab by viewModel.cashierTab.collectAsState()
+    val adminTab by viewModel.adminTab.collectAsState()
 
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             MtuHeader(
-                currentRole = currentRole,
-                onRoleSelected = { viewModel.selectRole(it) },
+                currentActor = currentActor,
+                onSelectActor = { viewModel.setActor(it) },
+                currentStudent = currentStudent,
                 activeSession = activeSession,
                 isOfflineMode = isOfflineMode,
                 onToggleOfflineMode = { viewModel.toggleOfflineMode() },
@@ -84,115 +91,173 @@ fun MainAppRoot(viewModel: MealCardViewModel = viewModel()) {
                 containerColor = Color.White,
                 tonalElevation = 8.dp
             ) {
-                // 1. Student Card Tab (Mobile Student UI)
-                NavigationBarItem(
-                    selected = currentRole == AppRole.STUDENT,
-                    onClick = { viewModel.selectRole(AppRole.STUDENT) },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.School,
-                            contentDescription = "Student Card"
+                when (currentActor) {
+                    // 1. STUDENT ACTOR NAVIGATION
+                    UserActor.STUDENT -> {
+                        NavigationBarItem(
+                            selected = studentTab == StudentTab.MY_CARD,
+                            onClick = { viewModel.setStudentTab(StudentTab.MY_CARD) },
+                            icon = {
+                                Icon(imageVector = Icons.Default.School, contentDescription = "My Meal Card")
+                            },
+                            label = {
+                                Text(
+                                    text = "My Meal Card",
+                                    fontSize = 11.sp,
+                                    fontWeight = if (studentTab == StudentTab.MY_CARD) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color(0xFF004D40),
+                                selectedTextColor = Color(0xFF004D40),
+                                indicatorColor = Color(0xFFB2DFDB)
+                            ),
+                            modifier = Modifier.testTag("student_nav_card")
                         )
-                    },
-                    label = {
-                        Text(
-                            text = "Meal Card",
-                            fontSize = 10.sp,
-                            fontWeight = if (currentRole == AppRole.STUDENT) FontWeight.Bold else FontWeight.Normal
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF004D40),
-                        selectedTextColor = Color(0xFF004D40),
-                        indicatorColor = Color(0xFFB2DFDB)
-                    ),
-                    modifier = Modifier.testTag("nav_student_tab")
-                )
 
-                // 2. Gatekeeper Scanner Tab (Mobile Scanner UI)
-                NavigationBarItem(
-                    selected = currentRole == AppRole.GATEKEEPER,
-                    onClick = { viewModel.selectRole(AppRole.GATEKEEPER) },
-                    icon = {
-                        BadgedBox(
-                            badge = {
-                                if (unsyncedCount > 0) {
-                                    Badge(containerColor = Color(0xFFD84315)) {
-                                        Text("$unsyncedCount", color = Color.White)
+                        NavigationBarItem(
+                            selected = studentTab == StudentTab.MEAL_STATUS,
+                            onClick = { viewModel.setStudentTab(StudentTab.MEAL_STATUS) },
+                            icon = {
+                                Icon(imageVector = Icons.Default.Restaurant, contentDescription = "My Meal Dashboard")
+                            },
+                            label = {
+                                Text(
+                                    text = "Meal Dashboard",
+                                    fontSize = 11.sp,
+                                    fontWeight = if (studentTab == StudentTab.MEAL_STATUS) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color(0xFF004D40),
+                                selectedTextColor = Color(0xFF004D40),
+                                indicatorColor = Color(0xFFB2DFDB)
+                            ),
+                            modifier = Modifier.testTag("student_nav_dashboard")
+                        )
+                    }
+
+                    // 2. CASHIER (SCANNER) ACTOR NAVIGATION
+                    UserActor.CASHIER -> {
+                        NavigationBarItem(
+                            selected = cashierTab == CashierTab.SCANNER,
+                            onClick = { viewModel.setCashierTab(CashierTab.SCANNER) },
+                            icon = {
+                                BadgedBox(
+                                    badge = {
+                                        if (unsyncedCount > 0) {
+                                            Badge(containerColor = Color(0xFFD84315)) {
+                                                Text("$unsyncedCount", color = Color.White)
+                                            }
+                                        }
                                     }
+                                ) {
+                                    Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = "Turnstile Scanner")
                                 }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.QrCodeScanner,
-                                contentDescription = "Scanner Gate"
-                            )
-                        }
-                    },
-                    label = {
-                        Text(
-                            text = "Gate Scanner",
-                            fontSize = 10.sp,
-                            fontWeight = if (currentRole == AppRole.GATEKEEPER) FontWeight.Bold else FontWeight.Normal
+                            },
+                            label = {
+                                Text(
+                                    text = "Turnstile Scanner",
+                                    fontSize = 11.sp,
+                                    fontWeight = if (cashierTab == CashierTab.SCANNER) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color(0xFF004D40),
+                                selectedTextColor = Color(0xFF004D40),
+                                indicatorColor = Color(0xFFB2DFDB)
+                            ),
+                            modifier = Modifier.testTag("cashier_nav_scanner")
                         )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF004D40),
-                        selectedTextColor = Color(0xFF004D40),
-                        indicatorColor = Color(0xFFB2DFDB)
-                    ),
-                    modifier = Modifier.testTag("nav_scanner_tab")
-                )
 
-                // 3. Admin Mobile Stats
-                NavigationBarItem(
-                    selected = currentRole == AppRole.ADMIN,
-                    onClick = { viewModel.selectRole(AppRole.ADMIN) },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Assignment,
-                            contentDescription = "Admin Mobile"
+                        NavigationBarItem(
+                            selected = cashierTab == CashierTab.SHIFT_LOGS,
+                            onClick = { viewModel.setCashierTab(CashierTab.SHIFT_LOGS) },
+                            icon = {
+                                Icon(imageVector = Icons.Default.FormatListBulleted, contentDescription = "Shift Logs")
+                            },
+                            label = {
+                                Text(
+                                    text = "Shift Logs",
+                                    fontSize = 11.sp,
+                                    fontWeight = if (cashierTab == CashierTab.SHIFT_LOGS) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color(0xFF004D40),
+                                selectedTextColor = Color(0xFF004D40),
+                                indicatorColor = Color(0xFFB2DFDB)
+                            ),
+                            modifier = Modifier.testTag("cashier_nav_logs")
                         )
-                    },
-                    label = {
-                        Text(
-                            text = "Mobile Admin",
-                            fontSize = 10.sp,
-                            fontWeight = if (currentRole == AppRole.ADMIN) FontWeight.Bold else FontWeight.Normal
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF004D40),
-                        selectedTextColor = Color(0xFF004D40),
-                        indicatorColor = Color(0xFFB2DFDB)
-                    ),
-                    modifier = Modifier.testTag("nav_admin_tab")
-                )
+                    }
 
-                // 4. Central Web App Portal
-                NavigationBarItem(
-                    selected = currentRole == AppRole.WEB_PORTAL,
-                    onClick = { viewModel.selectRole(AppRole.WEB_PORTAL) },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Language,
-                            contentDescription = "Web Portal"
+                    // 3. ADMINISTRATOR ACTOR NAVIGATION
+                    UserActor.ADMIN -> {
+                        NavigationBarItem(
+                            selected = adminTab == AdminTab.HEADCOUNT,
+                            onClick = { viewModel.setAdminTab(AdminTab.HEADCOUNT) },
+                            icon = {
+                                Icon(imageVector = Icons.Default.Assignment, contentDescription = "Campus Analytics")
+                            },
+                            label = {
+                                Text(
+                                    text = "Headcounts",
+                                    fontSize = 11.sp,
+                                    fontWeight = if (adminTab == AdminTab.HEADCOUNT) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color(0xFF004D40),
+                                selectedTextColor = Color(0xFF004D40),
+                                indicatorColor = Color(0xFFB2DFDB)
+                            ),
+                            modifier = Modifier.testTag("admin_nav_headcount")
                         )
-                    },
-                    label = {
-                        Text(
-                            text = "Web Portal",
-                            fontSize = 10.sp,
-                            fontWeight = if (currentRole == AppRole.WEB_PORTAL) FontWeight.Bold else FontWeight.Normal
+
+                        NavigationBarItem(
+                            selected = adminTab == AdminTab.ROSTER,
+                            onClick = { viewModel.setAdminTab(AdminTab.ROSTER) },
+                            icon = {
+                                Icon(imageVector = Icons.Default.People, contentDescription = "Student Roster")
+                            },
+                            label = {
+                                Text(
+                                    text = "Student Roster",
+                                    fontSize = 11.sp,
+                                    fontWeight = if (adminTab == AdminTab.ROSTER) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color(0xFF004D40),
+                                selectedTextColor = Color(0xFF004D40),
+                                indicatorColor = Color(0xFFB2DFDB)
+                            ),
+                            modifier = Modifier.testTag("admin_nav_roster")
                         )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF004D40),
-                        selectedTextColor = Color(0xFF004D40),
-                        indicatorColor = Color(0xFFB2DFDB)
-                    ),
-                    modifier = Modifier.testTag("nav_web_portal_tab")
-                )
+
+                        NavigationBarItem(
+                            selected = adminTab == AdminTab.WEB_PORTAL,
+                            onClick = { viewModel.setAdminTab(AdminTab.WEB_PORTAL) },
+                            icon = {
+                                Icon(imageVector = Icons.Default.Language, contentDescription = "Web Dashboard")
+                            },
+                            label = {
+                                Text(
+                                    text = "Web Portal",
+                                    fontSize = 11.sp,
+                                    fontWeight = if (adminTab == AdminTab.WEB_PORTAL) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color(0xFF004D40),
+                                selectedTextColor = Color(0xFF004D40),
+                                indicatorColor = Color(0xFFB2DFDB)
+                            ),
+                            modifier = Modifier.testTag("admin_nav_web")
+                        )
+                    }
+                }
             }
         },
         modifier = Modifier.fillMaxSize()
@@ -202,11 +267,10 @@ fun MainAppRoot(viewModel: MealCardViewModel = viewModel()) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            when (currentRole) {
-                AppRole.STUDENT -> StudentMealCardScreen(viewModel = viewModel)
-                AppRole.GATEKEEPER -> GatekeeperScannerScreen(viewModel = viewModel)
-                AppRole.ADMIN -> AdminDashboardScreen(viewModel = viewModel)
-                AppRole.WEB_PORTAL -> WebPortalScreen()
+            when (currentActor) {
+                UserActor.STUDENT -> StudentMealCardScreen(viewModel = viewModel)
+                UserActor.CASHIER -> CashierScannerScreen(viewModel = viewModel)
+                UserActor.ADMIN -> AdminDashboardScreen(viewModel = viewModel)
             }
         }
     }

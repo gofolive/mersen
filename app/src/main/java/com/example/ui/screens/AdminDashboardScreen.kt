@@ -70,6 +70,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.DietaryType
@@ -78,6 +79,7 @@ import com.example.data.model.MealSession
 import com.example.data.model.Student
 import com.example.data.model.StudentStatus
 import com.example.data.model.VerificationStatus
+import com.example.ui.model.AdminTab
 import com.example.ui.viewmodel.MealCardViewModel
 
 @Composable
@@ -95,7 +97,7 @@ fun AdminDashboardScreen(
     val dietaryFilter by viewModel.selectedDietaryFilter.collectAsState()
     val hallFilter by viewModel.selectedHallFilter.collectAsState()
     val statusFilter by viewModel.selectedStatusFilter.collectAsState()
-    val unsyncedCount by viewModel.unsyncedCount.collectAsState()
+    val currentTab by viewModel.adminTab.collectAsState()
 
     var showReportDialog by remember { mutableStateOf(false) }
     var showAddStudentDialog by remember { mutableStateOf(false) }
@@ -112,6 +114,11 @@ fun AdminDashboardScreen(
     val totalCampusCapacity = 3000
     val capacityFraction = (totalServedToday.toFloat() / totalCampusCapacity).coerceIn(0f, 1f)
 
+    if (currentTab == AdminTab.WEB_PORTAL) {
+        WebPortalScreen(modifier = modifier)
+        return
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
@@ -123,386 +130,443 @@ fun AdminDashboardScreen(
             item {
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Real-time Consumption & Headcount Executive Card
-                ElevatedCard(
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("admin_headcount_card")
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "LIVE CAMPUS HEADCOUNT",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    letterSpacing = 0.5.sp
-                                )
-                                Text(
-                                    text = "Daily Meal Consumption",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-
-                            Button(
-                                onClick = { showReportDialog = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00796B)),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.testTag("generate_report_button")
-                            ) {
-                                Icon(imageVector = Icons.Default.Assignment, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Daily Report", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        // Headcount progress bar
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Bottom
-                        ) {
-                            Text(
-                                text = "$totalServedToday Meals Served",
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Black,
-                                color = Color(0xFF004D40)
-                            )
-                            Text(
-                                text = "Capacity: $totalCampusCapacity (${(capacityFraction * 100).toInt()}%)",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(6.dp))
-                        LinearProgressIndicator(
-                            progress = { capacityFraction },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                            color = Color(0xFF00796B),
-                            trackColor = Color(0xFFB2DFDB)
-                        )
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        // Session Breakdown Pillars
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            SessionMetricCard(
-                                title = "Breakfast",
-                                count = breakfastCount,
-                                time = "06:30 - 09:00",
-                                color = Color(0xFF00897B),
-                                modifier = Modifier.weight(1f)
-                            )
-                            SessionMetricCard(
-                                title = "Lunch",
-                                count = lunchCount,
-                                time = "11:45 - 14:30",
-                                color = Color(0xFF00796B),
-                                modifier = Modifier.weight(1f)
-                            )
-                            SessionMetricCard(
-                                title = "Dinner",
-                                count = dinnerCount,
-                                time = "18:00 - 21:00",
-                                color = Color(0xFF004D40),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Anti-Passback & Fraud Interception Banner
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFFFEBEE),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Shield,
-                                    contentDescription = null,
-                                    tint = Color(0xFFC62828),
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(
-                                        text = "$passbackViolations Anti-Passback Duplicate Frauds Prevented",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp,
-                                        color = Color(0xFFC62828)
-                                    )
-                                    Text(
-                                        text = "Saved ~$passbackViolations meal rations from unauthorized double-scanning.",
-                                        fontSize = 10.sp,
-                                        color = Color(0xFF5D4037)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Student Directory & Eligibility Management Title
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "STUDENT ELIGIBILITY ROSTER",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            letterSpacing = 0.5.sp
-                        )
-                        Text(
-                            text = "Manage Access & Dietary Profiles (${students.size} / ${allStudentsCount.size})",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Button(
-                        onClick = { showAddStudentDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF004D40)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.testTag("add_student_button")
-                    ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Add", fontSize = 11.sp)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Search Bar
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { viewModel.updateStudentSearchQuery(it) },
-                    placeholder = { Text("Search by student name, MTU ID, or department...", fontSize = 12.sp) },
-                    leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = Color(0xFF00796B)) },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.updateStudentSearchQuery("") }) {
-                                Icon(imageVector = Icons.Default.Close, contentDescription = "Clear")
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("admin_search_bar")
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Filter Chips Row (Dietary, Hall, Status)
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                // Admin Sub-Tab Bar (Campus Analytics vs Student Roster vs Web Dashboard)
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    item {
-                        FilterChip(
-                            selected = dietaryFilter == null && hallFilter == null && statusFilter == null,
-                            onClick = {
-                                viewModel.setDietaryFilter(null)
-                                viewModel.setHallFilter(null)
-                                viewModel.setStatusFilter(null)
-                            },
-                            label = { Text("All Students", fontSize = 11.sp) }
-                        )
-                    }
-                    items(DietaryType.values()) { dietary ->
-                        FilterChip(
-                            selected = dietaryFilter == dietary,
-                            onClick = {
-                                viewModel.setDietaryFilter(if (dietaryFilter == dietary) null else dietary)
-                            },
-                            label = { Text(dietary.displayName.split(" ").first(), fontSize = 11.sp) }
-                        )
-                    }
-                    items(DiningHall.values()) { hall ->
-                        FilterChip(
-                            selected = hallFilter == hall,
-                            onClick = {
-                                viewModel.setHallFilter(if (hallFilter == hall) null else hall)
-                            },
-                            label = { Text(hall.code, fontSize = 11.sp) }
-                        )
-                    }
-                    items(StudentStatus.values()) { status ->
-                        FilterChip(
-                            selected = statusFilter == status,
-                            onClick = {
-                                viewModel.setStatusFilter(if (statusFilter == status) null else status)
-                            },
-                            label = { Text(status.name, fontSize = 11.sp) }
-                        )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        AdminTab.values().forEach { tab ->
+                            val isSelected = currentTab == tab
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isSelected) Color(0xFF004D40) else Color.Transparent,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { viewModel.setAdminTab(tab) }
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = tab.title,
+                                    textAlign = TextAlign.Center,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 12.sp,
+                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Student Roster List
-            items(students) { student ->
-                val isEligible = student.status == StudentStatus.ACTIVE
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .testTag("student_row_${student.mtuId.replace("/", "_")}")
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
+            // TAB 1: CAMPUS ANALYTICS & HEADCOUNT
+            if (currentTab == AdminTab.HEADCOUNT) {
+                item {
+                    ElevatedCard(
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("admin_headcount_card")
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .size(42.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF004D40))
-                                ) {
-                                    Text(
-                                        text = student.avatarSeed,
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(12.dp))
-
                                 Column {
                                     Text(
-                                        text = student.fullName,
+                                        text = "CAMPUS-WIDE REAL-TIME HEADCOUNT",
+                                        fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
+                                        color = MaterialTheme.colorScheme.primary,
+                                        letterSpacing = 0.5.sp
                                     )
                                     Text(
-                                        text = "${student.department} • Year ${student.yearOfStudy}",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        text = "Dining Consumption Overview",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
-                                    Text(
-                                        text = "ID: ${student.mtuId}",
-                                        fontFamily = FontFamily.Monospace,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 11.sp,
-                                        color = Color(0xFF00796B)
-                                    )
+                                }
+
+                                Button(
+                                    onClick = { showReportDialog = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00796B)),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(imageVector = Icons.Default.Assignment, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Daily Report", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
 
-                            // Toggle eligibility switch
-                            Column(horizontalAlignment = Alignment.End) {
-                                Switch(
-                                    checked = isEligible,
-                                    onCheckedChange = { viewModel.toggleStudentStatus(student) },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color(0xFF00796B),
-                                        checkedTrackColor = Color(0xFFB2DFDB)
-                                    ),
-                                    modifier = Modifier.testTag("toggle_status_${student.mtuId.replace("/", "_")}")
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            // Headcount progress bar
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                Text(
+                                    text = "$totalServedToday Students Served",
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFF004D40)
                                 )
                                 Text(
-                                    text = if (isEligible) "Active" else "Suspended",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isEligible) Color(0xFF2E7D32) else Color(0xFFC62828)
+                                    text = "Target: $totalCampusCapacity (${(capacityFraction * 100).toInt()}%)",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(8.dp))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                        Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
+                            LinearProgressIndicator(
+                                progress = { capacityFraction },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                color = Color(0xFF00796B),
+                                trackColor = Color(0xFFB2DFDB)
+                            )
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = Color(student.dietaryType.badgeColor).copy(alpha = 0.12f)
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            // Session Breakdown Cards
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                SessionMetricCard(
+                                    title = "Breakfast",
+                                    count = breakfastCount,
+                                    time = "06:30 - 09:00",
+                                    color = Color(0xFF00897B),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                SessionMetricCard(
+                                    title = "Lunch",
+                                    count = lunchCount,
+                                    time = "11:45 - 14:30",
+                                    color = Color(0xFF00796B),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                SessionMetricCard(
+                                    title = "Dinner",
+                                    count = dinnerCount,
+                                    time = "18:00 - 21:00",
+                                    color = Color(0xFF004D40),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Anti-Passback Duplicates Prevented
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFFFEBEE),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = student.dietaryType.displayName,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color(student.dietaryType.badgeColor),
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    Icon(
+                                        imageVector = Icons.Default.Shield,
+                                        contentDescription = null,
+                                        tint = Color(0xFFC62828),
+                                        modifier = Modifier.size(22.dp)
                                     )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = "$passbackViolations Anti-Passback Frauds Intercepted",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            color = Color(0xFFC62828)
+                                        )
+                                        Text(
+                                            text = "Card sharing prevented. Saved ~$passbackViolations rations from unauthorized duplicate entrance.",
+                                            fontSize = 10.sp,
+                                            color = Color(0xFF5D4037)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Kitchen Food Allocation Card
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Kitchen Food Preparation & Rations",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xFFF1F8E9),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Text("PREPARED TODAY", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF33691E))
+                                        Text("3,100 Rations", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color(0xFF1B5E20))
+                                        Text("Injera & Wot", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                 }
 
                                 Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xFFE0F7FA),
+                                    modifier = Modifier.weight(1f)
                                 ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Text("REMAINING BUFFER", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF006064))
+                                        Text("${(3100 - totalServedToday).coerceAtLeast(0)} Rations", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color(0xFF00838F))
+                                        Text("Available in Kitchen", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+
+            // TAB 2: STUDENT ROSTER & ELIGIBILITY
+            if (currentTab == AdminTab.ROSTER) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "STUDENT ELIGIBILITY DIRECTORY",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                letterSpacing = 0.5.sp
+                            )
+                            Text(
+                                text = "All Registered Students (${students.size} / ${allStudentsCount.size})",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Button(
+                            onClick = { showAddStudentDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF004D40)),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Add Student", fontSize = 11.sp)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Search Bar
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { viewModel.updateStudentSearchQuery(it) },
+                        placeholder = { Text("Search by student name, MTU ID, or department...", fontSize = 12.sp) },
+                        leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = Color(0xFF00796B)) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.updateStudentSearchQuery("") }) {
+                                    Icon(imageVector = Icons.Default.Close, contentDescription = "Clear")
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Filter Chips Row
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        item {
+                            FilterChip(
+                                selected = dietaryFilter == null && hallFilter == null && statusFilter == null,
+                                onClick = {
+                                    viewModel.setDietaryFilter(null)
+                                    viewModel.setHallFilter(null)
+                                    viewModel.setStatusFilter(null)
+                                },
+                                label = { Text("All", fontSize = 11.sp) }
+                            )
+                        }
+                        items(DietaryType.values()) { dietary ->
+                            FilterChip(
+                                selected = dietaryFilter == dietary,
+                                onClick = { viewModel.setDietaryFilter(if (dietaryFilter == dietary) null else dietary) },
+                                label = { Text(dietary.displayName.split(" ").first(), fontSize = 11.sp) }
+                            )
+                        }
+                        items(DiningHall.values()) { hall ->
+                            FilterChip(
+                                selected = hallFilter == hall,
+                                onClick = { viewModel.setHallFilter(if (hallFilter == hall) null else hall) },
+                                label = { Text(hall.code, fontSize = 11.sp) }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
+                // Student Items
+                items(students) { student ->
+                    val isEligible = student.status == StudentStatus.ACTIVE
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .size(42.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF004D40))
+                                    ) {
+                                        Text(
+                                            text = student.avatarSeed,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(12.dp))
+
+                                    Column {
+                                        Text(text = student.fullName, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        Text(text = "${student.department} • Year ${student.yearOfStudy}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(text = "ID: ${student.mtuId}", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, color = Color(0xFF00796B))
+                                    }
+                                }
+
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Switch(
+                                        checked = isEligible,
+                                        onCheckedChange = { viewModel.toggleStudentStatus(student) },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color(0xFF00796B),
+                                            checkedTrackColor = Color(0xFFB2DFDB)
+                                        )
+                                    )
                                     Text(
-                                        text = student.diningHall.code,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        text = if (isEligible) "Active" else "Suspended",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isEligible) Color(0xFF2E7D32) else Color(0xFFC62828)
                                     )
                                 }
                             }
 
-                            TextButton(
-                                onClick = { studentToEdit = student },
-                                modifier = Modifier.height(30.dp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(imageVector = Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(12.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Edit Diet/Hall", fontSize = 11.sp)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = Color(student.dietaryType.badgeColor).copy(alpha = 0.12f)
+                                    ) {
+                                        Text(
+                                            text = student.dietaryType.displayName,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color(student.dietaryType.badgeColor),
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                    ) {
+                                        Text(
+                                            text = student.diningHall.code,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+
+                                TextButton(
+                                    onClick = { studentToEdit = student },
+                                    modifier = Modifier.height(30.dp)
+                                ) {
+                                    Icon(imageVector = Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Edit Diet/Hall", fontSize = 11.sp)
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            item {
-                Spacer(modifier = Modifier.height(40.dp))
+                item {
+                    Spacer(modifier = Modifier.height(30.dp))
+                }
             }
         }
     }
@@ -518,7 +582,7 @@ fun AdminDashboardScreen(
             text = {
                 Column {
                     Text(
-                        text = "Real-time consumption and fraud prevention report generated for MTU Tepi campus dining administration.",
+                        text = "Official consumption and fraud report generated for MTU Tepi campus dining administration.",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -601,7 +665,6 @@ fun AdminDashboardScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    // Dietary choice
                     Text("Dietary Profile:", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         items(DietaryType.values()) { d ->

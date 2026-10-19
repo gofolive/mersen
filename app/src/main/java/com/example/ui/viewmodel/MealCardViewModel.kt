@@ -37,7 +37,20 @@ class MealCardViewModel(application: Application) : AndroidViewModel(application
     private val database = MtuMealDatabase.getInstance(application)
     private val repository = MealCardRepository(database.mealCardDao())
 
-    // App Navigation Role
+    // Distinct Actor Separation
+    private val _currentActor = MutableStateFlow(com.example.ui.model.UserActor.STUDENT)
+    val currentActor: StateFlow<com.example.ui.model.UserActor> = _currentActor.asStateFlow()
+
+    private val _studentTab = MutableStateFlow(com.example.ui.model.StudentTab.MY_CARD)
+    val studentTab: StateFlow<com.example.ui.model.StudentTab> = _studentTab.asStateFlow()
+
+    private val _cashierTab = MutableStateFlow(com.example.ui.model.CashierTab.SCANNER)
+    val cashierTab: StateFlow<com.example.ui.model.CashierTab> = _cashierTab.asStateFlow()
+
+    private val _adminTab = MutableStateFlow(com.example.ui.model.AdminTab.HEADCOUNT)
+    val adminTab: StateFlow<com.example.ui.model.AdminTab> = _adminTab.asStateFlow()
+
+    // App Navigation Role (legacy compatibility)
     private val _currentRole = MutableStateFlow(AppRole.STUDENT)
     val currentRole: StateFlow<AppRole> = _currentRole.asStateFlow()
 
@@ -155,6 +168,22 @@ class MealCardViewModel(application: Application) : AndroidViewModel(application
 
     fun selectRole(role: AppRole) {
         _currentRole.value = role
+    }
+
+    fun setActor(actor: com.example.ui.model.UserActor) {
+        _currentActor.value = actor
+    }
+
+    fun setStudentTab(tab: com.example.ui.model.StudentTab) {
+        _studentTab.value = tab
+    }
+
+    fun setCashierTab(tab: com.example.ui.model.CashierTab) {
+        _cashierTab.value = tab
+    }
+
+    fun setAdminTab(tab: com.example.ui.model.AdminTab) {
+        _adminTab.value = tab
     }
 
     fun selectStudent(student: Student) {
